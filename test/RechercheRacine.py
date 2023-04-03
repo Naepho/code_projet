@@ -121,3 +121,43 @@ def secante(f, x0, x1, tol):
         return [0, -1]
     
     return [absnew, 0]
+
+# Si la racine existe, on la trouvera
+def recursive(f, x0, x1, tol, tol_bornes, evolTol, nbVal):
+    bornes = []
+    indices = []
+    below_tol = False
+    pas = (x1-x0)/nbVal
+
+    answer = np.zeros(nbVal)
+    for i in range(nbVal):
+        answer[i] = f(x0 + i*pas)
+        if np.abs(answer[i]) <= tol:
+            return x0+i*pas, 0
+
+    i = 0
+    while i < nbVal:
+        if not below_tol:
+            if np.abs(answer[i]) <= tol_bornes:
+                bornes.append([x0 + i*pas, -1])
+                print("appended")
+                indices.append([i, -1])
+                below_tol = True
+        if below_tol:
+            if np.abs(answer[i]) > tol_bornes:
+                bornes[-1][1] = x0 + i*pas
+                indices[-1][1] = i
+                below_tol = False
+        i += 1
+
+    if bornes == []:
+        return 0, -1
+    if bornes[-1][1] == -1:
+        bornes[-1][1] = x1
+        indices[-1][1] = nbVal
+    
+    for i in range(nbVal):
+        reponse_potentielle, state = recursive(f, bornes[i][0], bornes[i][1], tol, tol_bornes*evolTol, evolTol, nbVal)
+        if state != -1:
+            return reponse_potentielle, 0
+    return 0, -1
