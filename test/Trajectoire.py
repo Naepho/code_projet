@@ -1,6 +1,6 @@
 from fonctionNormeAngleToComp import compVect
 from valeurs import constantes as cte
-from Calcul_trajectoire import euler, deriver
+from Calcul_trajectoire import euler, deriver, derivee_solve_ivp, distance
 from RechercheRacine import secante
 
 import numpy as np
@@ -100,25 +100,3 @@ def minimumDistancePourAngle(angle, derivee, angles):
             gardien = False
     
     return minimumDistance(angle) * derivee[indice]/np.abs(derivee[indice])
-
-def distance(x1, y1, x2, y2):
-    return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
-
-def derivee_solve_ivp(t, positions_vitesses_masses):
-    nbAstre = int(len(positions_vitesses_masses)/5)
-
-    arr = np.zeros((nbAstre, 5))
-    for i in range(nbAstre):
-        for j in range(5):
-            arr[i][j] = positions_vitesses_masses[i*5+j]
-
-    new_arr = deriver(t, arr)
-    if type(new_arr) is int and new_arr == -1:
-        for i in range(nbAstre):
-            arr[i][0] = arr[i][0] + t*arr[i][2]
-            arr[i][1] = arr[i][1] + t*arr[i][3]
-        new_arr = arr.flatten()
-    else:
-        new_arr = np.reshape(new_arr, nbAstre*5)
-        
-    return new_arr
