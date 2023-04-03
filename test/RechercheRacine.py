@@ -139,8 +139,9 @@ def recursive(f, x0, x1, tol, tol_bornes, evolTol, nbVal):
     while i < nbVal:
         if not below_tol:
             if np.abs(answer[i]) <= tol_bornes:
-                bornes.append([x0 + i*pas, -1])
-                print("appended")
+                bornes.append([x0 + (i-1)*pas, -1])
+                if i == 0:
+                    bornes[-1][0] = x0
                 indices.append([i, -1])
                 below_tol = True
         if below_tol:
@@ -156,7 +157,7 @@ def recursive(f, x0, x1, tol, tol_bornes, evolTol, nbVal):
         bornes[-1][1] = x1
         indices[-1][1] = nbVal
     
-    for i in range(nbVal):
+    for i in range(len(bornes)):
         reponse_potentielle, state = recursive(f, bornes[i][0], bornes[i][1], tol, tol_bornes*evolTol, evolTol, nbVal)
         if state != -1:
             return reponse_potentielle, 0

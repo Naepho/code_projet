@@ -6,10 +6,14 @@ import time
 
 from valeurs import vitesse, constantes
 
-angleAst = 5.106550164787945
+# angleAst = 5.106550164787945
+angleAst =  74/360*2*np.pi + np.pi
+
+# angleAst = angle([-1.451*100, 0], [0, vitesse(3.023*1e4)], [100, 200], constantes['vitesseAsteroide'])
+# print(angleAst)
 
 start = time.time()
-test = angleVaisseau([0, -1.451*100], [vitesse(3.023*1e4), 0], [100, 200], constantes['vitesseAsteroide'], angleAst, constantes['vitesseVaisseau'])
+test = angleVaisseau([1.451*100, 0], [0, - vitesse(3.023*1e4)], [- 100,  100], constantes['vitesseAsteroide'], angleAst, constantes['vitesseVaisseau'])
 print("Time of angle : " + str(time.time() - start))
 print(test)
 start = time.time()

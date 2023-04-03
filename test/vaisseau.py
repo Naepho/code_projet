@@ -2,7 +2,7 @@ from fonctionNormeAngleToComp import compVect
 from valeurs import constantes as cte
 from Trajectoire import derivee_solve_ivp, distance
 from Calcul_trajectoire import euler
-from RechercheRacine import secante, bissection
+from RechercheRacine import secante, bissection, recursive
 
 from scipy.integrate import solve_ivp
 import numpy as np
@@ -93,64 +93,97 @@ def angleVaisseau(posInitTerre, vitInitTerre, posInitAst, normeVitInitAst, angle
         answer[i] = minimumDistanceVaisseau(angleAst, angles[i])
     print(answer)
     print("Time bornes : " + str(time.time() - start))
-
-    derivee = np.zeros((len(answer) - 1))
-    for i in range(len(answer) - 1):
-        derivee[i] = answer[i+1] - answer[i]
     
-    # Calcul des bornes
-    bornes = []
-    indices = []
-    tol_bornes = constantes['tol_bornes']
-    below_tol = False
-
-    i = 0
-    while i < len(angles):
-        if not below_tol:
-            if answer[i] <= tol_bornes:
-                bornes.append([angles[i], -1])
-                print("appended")
-                indices.append([i, -1])
-                below_tol = True
-        if below_tol:
-            if answer[i] > tol_bornes:
-                bornes[-1][1] = angles[i]
-                indices[-1][1] = i
-                below_tol = False
-        i += 1
-
-    if bornes == []:
-        return -1
-    if bornes[-1][1] == -1:
-        bornes[-1][1] = 2*np.pi
-        indices[-1][1] = constantes['nbAngles']
-
-    print(bornes)
-    print(indices)
-    for i in bornes:
-        print(str(i) + " : " + str(minimumDistancePourAngleVaisseau(i[0], angleAst, derivee, angles)) + " " + str(minimumDistancePourAngleVaisseau(i[1], angleAst, derivee, angles)))
-
-    # plt.axis('equal')
-
-    # plt.plot(angles, answer, 'g')
-
-    # plt.title("Space simulation")
-    # plt.xlabel("Angle")
-    # plt.ylabel("minimumDistanceVaisseau")
-
-    # plt.show()
-
-    state = 2
-    max_i = len(bornes)
-    i = 0
-    while state != 0 and i < max_i:
-        reponse, state = secante(lambda angleVaisseau: minimumDistancePourAngleVaisseau(angleVaisseau, angleAst, derivee, angles), bornes[i][0], bornes[i][1], constantes['tol'])
-        print("State " + str(i) + " : " + str(state))
-        i += 1
-
+    start = time.time()
+    reponse, state = recursive(lambda angleVaisseau : minimumDistanceVaisseau(angleAst, angleVaisseau), 0, 2*np.pi, constantes['tol'], constantes['tol_bornes'], 0.5, constantes['nbAngles'])
+    print("Temps de recursive : " + str(time.time() - start))
+    print("State : " + str(state))
+    
     constantes = cte
 
     return reponse
+
+def collision(angleVaisseau, angleAst):
+    # print("Début de minimumDistanceVaisseau")
+    global constantes
+
+    # start = time.time()
+    if len(constantes['valeursInit']) < 3:
+        constantes['valeursInit'].append([0,0,0,0, constantes['masseVaisseau']]) # Rajout du vaisseau
+    nbAstres = len(constantes['valeursInit'])
+
+    # Vitesse de l'astéroide
+    vx, vy = compVect(angleAst, constantes['vitesseAsteroide'])
+    cond_init = constantes['valeursInit']
+    cond_init[1][2] = vx
+    cond_init[1][3] = vy
+
+    # Vitesse du vaisseau
+    vx, vy = compVect(angleVaisseau, constantes['vitesseVaisseau'])
+    cond_init[2][2] = vx + cond_init[0][2]
+    cond_init[2][3] = vy + cond_init[0][3]
+
+    # Position du vaisseau
+    for i in [0,1]:
+        cond_init[2][i] = compVect(angleVaisseau, 6000/1e9)[i] + constantes['valeursInit'][0][i]
+
+    # print("Init : " + str(time.time() - start))
+
+#    traj = euler(constantes['pas'], constantes['intervalleSimulation'], cond_init)
+    # start = time.time()
+    sol = solve_ivp(derivee_solve_ivp, constantes['intervalleSimulation'], np.reshape(cond_init, nbAstres*5), rtol=constantes['r-tol'], atol=constantes['a-tol'], max_step=constantes['pas'])
+    # print("Solve ivp : " + str(time.time() - start))
+
+    # Traduction de sol dans traj
+    # start = time.time()
+    traj = np.zeros((len(sol.t), nbAstres, 5))
+    for i in range(len(traj)):
+        for j in range(nbAstres):
+            for k in range(5):
+                traj[i][j][k] = sol.y[j*5 + k][i]
+    
+    points_x = np.zeros((nbAstres, len(traj)))
+    points_y = np.zeros((nbAstres, len(traj)))
+    for i in range(len(traj)):
+        for j in range(nbAstres):
+            points_x[j][i] = traj[i][j][0]
+            points_y[j][i] = traj[i][j][1]
+    
+    found = False
+    i = 0
+    while not found and i < len(points_x[0]):
+        if distance(points_x[1][i], points_y[1][i], points_x[2][i], points_y[2][i]) < constantes['tol']:
+            found = True
+        i += 1
+    if found == False:
+        print("L'astéroïde n'entre pas en collision avec le vaisseau")
+        return -1
+
+    pas = constantes['intervalleSimulation'][1]/len(points_x[0])
+    intervalleNouveau = [0, i*pas]
+    nouvelleCondInit = traj[i]
+    nouvelleCondInit[1][2] = (nouvelleCondInit[1][4]*nouvelleCondInit[1][2] + nouvelleCondInit[2][4]*nouvelleCondInit[2][2])/(nouvelleCondInit[1][4] + nouvelleCondInit[2][4])
+    nouvelleCondInit[1][4] += nouvelleCondInit[2][4]
+    nouvelleCondInit = nouvelleCondInit[:-1]
+
+    sol = solve_ivp(derivee_solve_ivp, intervalleNouveau, np.reshape(nouvelleCondInit, nbAstres*5), rtol=constantes['r-tol'], atol=constantes['a-tol'], max_step=constantes['pas'])
+
+    # Traduction de sol dans traj
+    traj = np.zeros((len(sol.t), nbAstres, 5))
+    for n in range(len(traj)):
+        for j in range(nbAstres):
+            for k in range(5):
+                traj[n][j][k] = sol.y[j*5 + k][n]
+    
+    points_x_new = np.zeros((nbAstres, len(traj)))
+    points_y_new = np.zeros((nbAstres, len(traj)))
+    for j in range(len(traj)):
+        for n in range(nbAstres):
+            points_x_new[n][j] = traj[j][n][0]
+            points_y_new[n][j] = traj[j][n][1]
+    
+
+
 
 # Fonction qui sert à signer l'angle avec la dérivée
 def minimumDistancePourAngleVaisseau(angleVaisseau, angleAst, derivee, angles):

@@ -23,8 +23,8 @@ constantes = {
     'tol': 1e-1, # Tolérance pour bissection et sécante
     'tol_bornes': 100, # Tolérance pour trouver les bornes dans la fonction angle
     'r-tol': 1, # rtol et atol de solve_ivp
-    'a-tol': 1e-7,
-    'nbAngles': 10, # Nombre d'angles calculés pour déterminer les bornes dans angle
+    'a-tol': 1e-13,
+    'nbAngles': 500, # Nombre d'angles calculés pour déterminer les bornes dans angle
     'intervalleSimulation': [0, 1],
     'valeursInit': [
         [0, -1.451*100, vitesse(3.023*1e4), 0, 5.972], # Terre
